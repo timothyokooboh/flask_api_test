@@ -31,6 +31,7 @@ class FormView extends Component {
       },
       crossDomain: true,
       success: (result) => {
+        console.log(result)
         document.getElementById("add-book-form").reset();
         return;
       },

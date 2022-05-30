@@ -1,6 +1,7 @@
 import os
-from flask import Flask, request, abort, jsonify
-from flask_sqlalchemy import SQLAlchemy  # , or_
+from flask import Flask, redirect, request, abort, jsonify, url_for
+from flask_sqlalchemy import SQLAlchemy # , or_,
+from sqlalchemy import desc
 from flask_cors import CORS
 import random
 
@@ -56,4 +57,62 @@ def create_app(test_config=None):
     # TEST: When completed, you will be able to a new book using the form. Try doing so from the last page of books.
     #       Your new book should show up immediately after you submit it at the end of the page.
 
+    @app.route("/books")
+    def list_books():
+        page = request.args.get("page", 1, type=int)
+        start = (page - 1) * BOOKS_PER_SHELF
+        end = start + BOOKS_PER_SHELF
+        books = Book.query.all()
+        books = [Book.format(book) for book in books]
+
+        return jsonify({
+            'books': books[start:end],
+            'success': True,
+            'total_books': len(books)
+        })
+
+    @app.route("/books/<int:book_id>", methods=["PATCH"])
+    def update_rating(book_id):
+        book = Book.query.get(book_id)
+        print(book)
+        rating = request.get_json()['rating']
+
+        book.rating = rating
+        Book.update(book)
+
+        return list_books()
+
+    @app.route("/books/<int:book_id>", methods=['DELETE'])
+    def deleteBook(book_id):
+        book = Book.query.get(book_id)
+        Book.delete(book)
+  
+        books = Book.query.all()
+        books = [Book.format(book) for book in books]
+
+        return jsonify({
+            'success': True,
+            'deleted': book_id,
+            'books': books[0:8],
+            'total_books': len(books)
+        })
+
+    @app.route("/books", methods=["POST"])
+    def create_post():
+        title = request.get_json()["title"]
+        author = request.get_json()["author"]
+        rating = request.get_json()["rating"]
+
+        book = Book(title=title, author=author, rating=rating)
+        Book.insert(book)
+
+        books = Book.query.order_by(desc(Book.id)).all()
+        books = [Book.format(book) for book in books]
+
+        return jsonify({
+            'success': True,
+            'books': books,
+            'total_pages': len(books)
+        })
+        
     return app
